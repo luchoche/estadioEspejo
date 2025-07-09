@@ -66,11 +66,16 @@
 		eye.position.set(0, 1.5, 2); // un poco elevado y frente al espejo
 		scene.add(eye);
 				
-const eyePos = eye.position.clone(); // Punto A: ojo
-const bouncePoint = new THREE.Vector3(0, 1.5, 0); // Punto B: donde choca con el espejo
-const reflectedPoint = new THREE.Vector3(0.8, 0.7, -1); // Punto C: diagonal hacia abajo y atrás
+const eyePos = eye.position.clone(); // Punto A: el ojo
+
+// Punto B: rebote en el centro del espejo
+const bouncePoint = new THREE.Vector3(0, 1.5, -2);
+
+// Punto C: rebota hacia abajo y más atrás
+const reflectedPoint = new THREE.Vector3(1, 0.5, -3.5);
 
 const rayPoints = [eyePos, bouncePoint, reflectedPoint];
+
 const rayGeometry = new THREE.BufferGeometry().setFromPoints(rayPoints);
 const rayMaterial = new THREE.LineBasicMaterial({ color: 0xffff00 });
 const ray = new THREE.Line(rayGeometry, rayMaterial);
