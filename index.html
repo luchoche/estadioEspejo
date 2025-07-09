@@ -65,12 +65,12 @@
 		const eye = new THREE.Mesh(new THREE.SphereGeometry(0.2, 32, 32), eyeMaterial);
 		eye.position.set(0, 1.5, 2); // un poco elevado y frente al espejo
 		scene.add(eye);
-		
-		const eyePos = eye.position.clone(); // punto A
+				
+const eyePos = eye.position.clone(); // Punto A
 
-const bouncePoint = new THREE.Vector3(0, 1.5, 0); // punto B (sobre el espejo a la misma altura que el ojo)
+const bouncePoint = new THREE.Vector3(eyePos.x, eyePos.y, 0); // Punto B (espejo)
 
-const reflectedPoint = new THREE.Vector3(0, 0.5, -1); // punto C (rebota hacia abajo y atrás)
+const reflectedPoint = new THREE.Vector3(eyePos.x, eyePos.y - 1, -0.5); // Punto C (rebota hacia abajo y atrás)
 
 const points = [eyePos, bouncePoint, reflectedPoint];
 
@@ -79,10 +79,10 @@ const rayMaterial = new THREE.LineBasicMaterial({ color: 0xffff00 });
 const ray = new THREE.Line(rayGeometry, rayMaterial);
 scene.add(ray);
 
-    const vaseGeometry = new THREE.CylinderGeometry(0.15, 0.25, 0.5, 32, 1, true);
+    const vaseGeometry = new THREE.CylinderGeometry(0.25, 0.15, 0.5, 32, 1, true);
     const vaseMaterial = new THREE.MeshPhongMaterial({ color: 0x2222aa, side: THREE.DoubleSide });
     const vase = new THREE.Mesh(vaseGeometry, vaseMaterial);
-    vase.position.set(0, 1.25, 1); // entre el ojo y el espejo
+    vase.position.set(0, 0.25, 1); // entre el ojo y el espejo
     scene.add(vase);
 
     scene.add(new THREE.AmbientLight(0xffffff, 0.6));
