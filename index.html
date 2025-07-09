@@ -94,5 +94,13 @@
     }
     animate();
   </script>
+
+  <pre id="errorLog" style="color:red; position:absolute; bottom:10px; left:10px;"></pre>
+  <script>
+    window.addEventListener('error', function(e) {
+      document.getElementById('errorLog').textContent = e.message;
+    });
+  </script>
+  
 </body>
 </html>
