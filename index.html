@@ -66,21 +66,48 @@
 		eye.position.set(0, 1.5, 2); // un poco elevado y frente al espejo
 		scene.add(eye);
 				
-const eyePos = eye.position.clone(); // Punto A: el ojo
+// Posiciones
+const eyePos = eye.position.clone();          // ojo (inicio)
+const bouncePoint = new THREE.Vector3(0, 1.5, -2);  // espejo (rebote)
+const reflectedEnd = new THREE.Vector3(0, 0, -3);   // punto final rayo reflejado
 
-// Punto B: rebote en el centro del espejo
-const bouncePoint = new THREE.Vector3(0, 1.5, -2);
+// Línea que va del ojo al espejo
+const geometry1 = new THREE.BufferGeometry().setFromPoints([eyePos, bouncePoint]);
+const material = new THREE.LineBasicMaterial({ color: 0xffff00 });
+const line1 = new THREE.Line(geometry1, material);
+scene.add(line1);
 
-// Punto C: rebota hacia abajo y más atrás
-const reflectedPoint = new THREE.Vector3(1, 0.5, -3.5);
+// Línea que va del espejo hacia abajo y atrás (rebote)
+const geometry2 = new THREE.BufferGeometry().setFromPoints([bouncePoint, reflectedEnd]);
+const line2 = new THREE.Line(geometry2, material);
+scene.add(line2);
 
-const rayPoints = [eyePos, bouncePoint, reflectedPoint];
+// Crear un grupo para el ramo
+const ramo = new THREE.Group();
 
-const rayGeometry = new THREE.BufferGeometry().setFromPoints(rayPoints);
-const rayMaterial = new THREE.LineBasicMaterial({ color: 0xffff00 });
-const ray = new THREE.Line(rayGeometry, rayMaterial);
+for (let i = 0; i < 3; i++) {
+  // Tallos
+  const stemGeometry = new THREE.CylinderGeometry(0.02, 0.02, 0.6, 8);
+  const stemMaterial = new THREE.MeshPhongMaterial({ color: 0x228B22 }); // verde
+  const stem = new THREE.Mesh(stemGeometry, stemMaterial);
+  
+  stem.position.y = 0.3; // mitad del alto del tallo
+  stem.position.x = (i - 1) * 0.08; // separarlos un poco
+  ramo.add(stem);
 
-scene.add(ray);
+  // Flor
+  const flowerGeometry = new THREE.SphereGeometry(0.07, 16, 16);
+  const colors = [0xff69b4, 0xffff00, 0xff0000]; // rosa, amarillo, rojo
+  const flowerMaterial = new THREE.MeshPhongMaterial({ color: colors[i % colors.length] });
+  const flower = new THREE.Mesh(flowerGeometry, flowerMaterial);
+
+  flower.position.set(stem.position.x, 0.6 + 0.07, 0); // justo encima del tallo
+  ramo.add(flower);
+}
+
+// Posicionar el ramo donde quieras (ejemplo: a la izquierda del florero)
+ramo.position.set(-1.2, 0, 1);
+scene.add(ramo);
 
     const vaseGeometry = new THREE.CylinderGeometry(0.25, 0.15, 0.5, 32, 1, true);
     const vaseMaterial = new THREE.MeshPhongMaterial({ color: 0x2222aa, side: THREE.DoubleSide });
