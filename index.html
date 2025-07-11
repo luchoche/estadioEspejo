@@ -116,6 +116,16 @@ scene.add(ramo);
     vase.scale.y = -1;
     scene.add(vase);
 
+// Copia virtual "reflejada" del ramo + jarrón en la posición virtual
+const ramaReflejada = ramo.clone();
+ramaReflejada.position.set(0, 0.6, -5); // Delante del espejo plano
+scene.add(ramaReflejada);
+
+const jarronReflejado = vase.clone();
+jarronReflejado.scale.y = 1; // jarrón derecho
+jarronReflejado.position.set(0, 0.25, -5);
+scene.add(jarronReflejado);
+
     scene.add(new THREE.AmbientLight(0xffffff, 0.6));
     const light = new THREE.DirectionalLight(0xffffff, 0.8);
     light.position.set(5, 10, 5);
