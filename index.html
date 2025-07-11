@@ -106,13 +106,14 @@ for (let i = 0; i < 3; i++) {
 }
 
 // Posicionar el ramo donde quieras (ejemplo: a la izquierda del florero)
-ramo.position.set(-1.2, 0, 1);
+ramo.position.set(0, 0.6, 1); // arriba del jarrón
 scene.add(ramo);
 
     const vaseGeometry = new THREE.CylinderGeometry(0.25, 0.15, 0.5, 32, 1, true);
     const vaseMaterial = new THREE.MeshPhongMaterial({ color: 0x2222aa, side: THREE.DoubleSide });
     const vase = new THREE.Mesh(vaseGeometry, vaseMaterial);
     vase.position.set(0, 0.25, 1); // entre el ojo y el espejo
+    vase.scale.y = -1;
     scene.add(vase);
 
     scene.add(new THREE.AmbientLight(0xffffff, 0.6));
