@@ -132,6 +132,20 @@ scene.add(ramo);
       controls.update();
       renderer.render(scene, camera);
     }
+
+		// Espejo curvo (simulado) como una semiesfera invertida
+		const curvedMirrorGeometry = new THREE.SphereGeometry(1.5, 32, 32, 0, Math.PI * 2, 0, Math.PI / 2);
+		const curvedMirrorMaterial = new THREE.MeshPhongMaterial({
+  		color: 0x4444ff,
+  		side: THREE.BackSide,
+  		transparent: true,
+  		opacity: 0.3,
+		});
+		const curvedMirror = new THREE.Mesh(curvedMirrorGeometry, curvedMirrorMaterial);
+		curvedMirror.rotation.x = Math.PI; // Para que mire hacia delante
+		curvedMirror.position.set(0, 1.5, 3); // Detrás del jarrón
+		scene.add(curvedMirror);
+
     animate();
   </script>
 
