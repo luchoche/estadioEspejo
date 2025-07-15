@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <title>Estadio del Espejo - Lacan (Reflejo Real)</title>
+  <title>Esquema Óptico de Lacan</title>
   <style>
     body { margin: 0; overflow: hidden; }
     #info {
@@ -18,19 +18,19 @@
 </head>
 <body>
   <div id="info">
-    <h3>Estadio del Espejo - Lacan (Reflejo Real)</h3>
-    <p>Rojo: Cuerpo Fragmentado<br>
-       Azul: Espejo con reflejo real<br>
-       Líneas: Rayos visuales<br>
-       Cámara: Posición del Sujeto</p>
+    <h3>Esquema Óptico de Lacan</h3>
+    <p>Rojo: Sujeto (ojo)<br>
+       Azul: Espejo plano<br>
+       Azul transparente: Espejo cóncavo<br>
+       Violeta: Imagen virtual (proyectada)<br>
+       Líneas amarillas: Rayos visuales<br>
+       Jarrón invertido con flores: objeto real</p>
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/three@0.145.0/build/three.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/three@0.145.0/examples/js/controls/OrbitControls.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/three@0.145.0/examples/js/objects/Reflector.js"></script>
 
   <script>
-
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(0xf0f0f0);
 
@@ -43,88 +43,96 @@
 
     const controls = new THREE.OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
-    console.log(THREE.OrbitControls); // ¿es función/clase o undefined?
 
-    const plane = new THREE.Mesh(
+    const floor = new THREE.Mesh(
       new THREE.PlaneGeometry(10, 10),
-      new THREE.MeshPhongMaterial({ color: 0x999999, side: THREE.DoubleSide })
+      new THREE.MeshPhongMaterial({ color: 0xaaaaaa, side: THREE.DoubleSide })
     );
-    plane.rotation.x = -Math.PI / 2;
-    scene.add(plane);
+    floor.rotation.x = -Math.PI / 2;
+    scene.add(floor);
 
-    const mirror = new THREE.Reflector(new THREE.PlaneGeometry(5, 5), {
-      color: new THREE.Color(0x0000ff),
-      textureWidth: window.innerWidth * window.devicePixelRatio,
-      textureHeight: window.innerHeight * window.devicePixelRatio
-    });
-    mirror.position.z = -2;
-    mirror.position.y = 1.5;
-    scene.add(mirror);
+    const eye = new THREE.Mesh(
+      new THREE.SphereGeometry(0.1, 16, 16),
+      new THREE.MeshPhongMaterial({ color: 0xff0000 })
+    );
+    eye.position.set(0, 2.5, -5.5);
+    scene.add(eye);
 
-    const eyeMaterial = new THREE.MeshPhongMaterial({ color: 0xff0000 });
-		const eye = new THREE.Mesh(new THREE.SphereGeometry(0.2, 32, 32), eyeMaterial);
-		eye.position.set(0, 1.5, 2); // un poco elevado y frente al espejo
-		scene.add(eye);
-				
-// Posiciones
-const eyePos = eye.position.clone();          // ojo (inicio)
-const bouncePoint = new THREE.Vector3(0, 1.5, -2);  // espejo (rebote)
-const reflectedEnd = new THREE.Vector3(0, 0, -3);   // punto final rayo reflejado
+    const mirrorPlane = new THREE.Mesh(
+      new THREE.PlaneGeometry(4, 4),
+      new THREE.MeshBasicMaterial({ color: 0x0000ff, side: THREE.DoubleSide })
+    );
+    mirrorPlane.position.set(0, 1.5, 0);
+    scene.add(mirrorPlane);
 
-// Línea que va del ojo al espejo
-const geometry1 = new THREE.BufferGeometry().setFromPoints([eyePos, bouncePoint]);
-const material = new THREE.LineBasicMaterial({ color: 0xffff00 });
-const line1 = new THREE.Line(geometry1, material);
-scene.add(line1);
+    const concaveMirror = new THREE.Mesh(
+      new THREE.SphereGeometry(2, 32, 32, 0, Math.PI),
+      new THREE.MeshPhongMaterial({ color: 0x0000ff, opacity: 0.3, transparent: true, side: THREE.BackSide })
+    );
+    concaveMirror.rotation.y = Math.PI;
+    concaveMirror.rotation.z = Math.PI / 2;
+    concaveMirror.position.set(0, 1.0, -5);
+    scene.add(concaveMirror);
 
-// Línea que va del espejo hacia abajo y atrás (rebote)
-const geometry2 = new THREE.BufferGeometry().setFromPoints([bouncePoint, reflectedEnd]);
-const line2 = new THREE.Line(geometry2, material);
-scene.add(line2);
-
-// Crear un grupo para el ramo
-const ramo = new THREE.Group();
-
-for (let i = 0; i < 3; i++) {
-  // Tallos
-  const stemGeometry = new THREE.CylinderGeometry(0.02, 0.02, 0.6, 8);
-  const stemMaterial = new THREE.MeshPhongMaterial({ color: 0x228B22 }); // verde
-  const stem = new THREE.Mesh(stemGeometry, stemMaterial);
-  
-  stem.position.y = 0.3; // mitad del alto del tallo
-  stem.position.x = (i - 1) * 0.08; // separarlos un poco
-  ramo.add(stem);
-
-  // Flor
-  const flowerGeometry = new THREE.SphereGeometry(0.07, 16, 16);
-  const colors = [0xff69b4, 0xffff00, 0xff0000]; // rosa, amarillo, rojo
-  const flowerMaterial = new THREE.MeshPhongMaterial({ color: colors[i % colors.length] });
-  const flower = new THREE.Mesh(flowerGeometry, flowerMaterial);
-
-  flower.position.set(stem.position.x, 0.6 + 0.07, 0); // justo encima del tallo
-  ramo.add(flower);
-}
-
-// Posicionar el ramo donde quieras (ejemplo: a la izquierda del florero)
-ramo.position.set(0, 0.6, 1); // arriba del jarrón
-scene.add(ramo);
-
-    const vaseGeometry = new THREE.CylinderGeometry(0.25, 0.15, 0.5, 32, 1, true);
-    const vaseMaterial = new THREE.MeshPhongMaterial({ color: 0x2222aa, side: THREE.DoubleSide });
-    const vase = new THREE.Mesh(vaseGeometry, vaseMaterial);
-    vase.position.set(0, 0.25, 1); // entre el ojo y el espejo
+    const vase = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.25, 0.15, 0.5, 32, 1, true),
+      new THREE.MeshPhongMaterial({ color: 0x2222aa, side: THREE.DoubleSide })
+    );
     vase.scale.y = -1;
+    vase.position.set(0.2, 0.25, -2.6);
     scene.add(vase);
 
-// Copia virtual "reflejada" del ramo + jarrón en la posición virtual
-const ramaReflejada = ramo.clone();
-ramaReflejada.position.set(0, 0.6, -5); // Delante del espejo plano
-scene.add(ramaReflejada);
+    const ramo = new THREE.Group();
+    for (let i = 0; i < 3; i++) {
+      const stem = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.02, 0.02, 0.6, 8),
+        new THREE.MeshPhongMaterial({ color: 0x228B22 })
+      );
+      stem.position.set((i - 1) * 0.08, 0.3, 0);
+      ramo.add(stem);
 
-const jarronReflejado = vase.clone();
-jarronReflejado.scale.y = 1; // jarrón derecho
-jarronReflejado.position.set(0, 0.25, -5);
-scene.add(jarronReflejado);
+      const flower = new THREE.Mesh(
+        new THREE.SphereGeometry(0.07, 16, 16),
+        new THREE.MeshPhongMaterial({ color: [0xff69b4, 0xffff00, 0xff0000][i % 3] })
+      );
+      flower.position.set(stem.position.x, 0.6 + 0.07, 0);
+      ramo.add(flower);
+    }
+    ramo.position.set(0.2, 0.6, -2.6);
+    scene.add(ramo);
+
+    const textureMaterial = new THREE.MeshBasicMaterial({ color: 0x9933ff, opacity: 0.6, transparent: true });
+
+    const virtualVase = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.5, 0.5),
+      textureMaterial.clone()
+    );
+    virtualVase.position.set(0, 0.75, -0.01);
+    virtualVase.rotation.y = Math.PI;
+    scene.add(virtualVase);
+
+    const virtualFlowers = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.5, 0.5),
+      textureMaterial.clone()
+    );
+    virtualFlowers.position.set(0.15, 1.35, -0.01);
+    virtualFlowers.rotation.y = Math.PI;
+    scene.add(virtualFlowers);
+
+    const rayMaterial = new THREE.LineBasicMaterial({ color: 0xffff00 });
+    const bouncePoint = new THREE.Vector3(0, 1.5, 0);
+    const realObjPoint = new THREE.Vector3(0.2, 1.5, -2.6);
+
+    const ray1 = new THREE.Line(
+      new THREE.BufferGeometry().setFromPoints([eye.position.clone(), bouncePoint]),
+      rayMaterial
+    );
+    const ray2 = new THREE.Line(
+      new THREE.BufferGeometry().setFromPoints([bouncePoint, realObjPoint]),
+      rayMaterial
+    );
+    scene.add(ray1);
+    scene.add(ray2);
 
     scene.add(new THREE.AmbientLight(0xffffff, 0.6));
     const light = new THREE.DirectionalLight(0xffffff, 0.8);
@@ -139,32 +147,15 @@ scene.add(jarronReflejado);
 
     function animate() {
       requestAnimationFrame(animate);
+
+      const deltaX = camera.position.x;
+      virtualVase.position.x = deltaX * -0.25;
+      virtualFlowers.position.x = 0.15 + deltaX * 0.25;
+
       controls.update();
       renderer.render(scene, camera);
     }
-
-		// Espejo curvo (simulado) como una semiesfera invertida
-		const curvedMirrorGeometry = new THREE.SphereGeometry(1.5, 32, 32, 0, Math.PI * 2, 0, Math.PI / 2);
-		const curvedMirrorMaterial = new THREE.MeshPhongMaterial({
-  		color: 0x4444ff,
-  		side: THREE.BackSide,
-  		transparent: true,
-  		opacity: 0.3,
-		});
-		const curvedMirror = new THREE.Mesh(curvedMirrorGeometry, curvedMirrorMaterial);
-		curvedMirror.rotation.x = Math.PI; // Para que mire hacia delante
-		curvedMirror.position.set(0, 1.5, 3); // Detrás del jarrón
-		scene.add(curvedMirror);
-
     animate();
   </script>
-
-  <pre id="errorLog" style="color:red; position:absolute; bottom:10px; left:10px;"></pre>
-  <script>
-    window.addEventListener('error', function(e) {
-      document.getElementById('errorLog').textContent = e.message;
-    });
-  </script>
-  
 </body>
 </html>
