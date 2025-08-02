@@ -1,161 +1,219 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <title>Esquema Óptico de Lacan</title>
+  <meta charset="UTF-8" />
+  <title>Esquema Óptico con Imagen Real/Virtual</title>
   <style>
     body { margin: 0; overflow: hidden; }
     #info {
       position: absolute;
-      top: 10px;
-      left: 10px;
+      top: 10px; left: 10px;
       background: rgba(255,255,255,0.8);
       padding: 10px;
-      font-family: Arial, sans-serif;
+      font-family: Arial;
+      z-index: 1;
+    }
+    #status {
+      position: absolute;
+      bottom: 10px; left: 10px;
+      background: rgba(0,0,0,0.6);
+      color: #fff; padding: 8px;
+      font-size: 14px; font-family: monospace;
       z-index: 1;
     }
   </style>
 </head>
 <body>
-  <div id="info">
-    <h3>Esquema Óptico de Lacan</h3>
-    <p>Rojo: Sujeto (ojo)<br>
-       Azul: Espejo plano<br>
-       Azul transparente: Espejo cóncavo<br>
-       Violeta: Imagen virtual (proyectada)<br>
-       Líneas amarillas: Rayos visuales<br>
-       Jarrón invertido con flores: objeto real</p>
-  </div>
+<div id="info">
+  <h3>Esquema Óptico</h3>
+  <p>
+    🔴 Sujeto (ojo) <br>
+    🔵 Espejo plano <br>
+    🔵 Transparente: Espejo cóncavo <br>
+    🟣 Imagen (real/virtual)
+  </p>
+</div>
+<div id="status"></div>
 
-  <script src="https://cdn.jsdelivr.net/npm/three@0.145.0/build/three.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/three@0.145.0/examples/js/controls/OrbitControls.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.145.0/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.145.0/examples/js/controls/OrbitControls.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.145.0/examples/js/controls/DragControls.js"></script>
 
-  <script>
-    const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0xf0f0f0);
+<script>
+(() => {
+  const scene = new THREE.Scene();
+  scene.background = new THREE.Color(0xf0f0f0);
 
-    const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 100);
-    camera.position.set(0, 1.5, 5);
+  const camera = new THREE.PerspectiveCamera(60, window.innerWidth/window.innerHeight, 0.1, 100);
+  camera.position.set(0, 2, 8);
 
-    const renderer = new THREE.WebGLRenderer();
+  const renderer = new THREE.WebGLRenderer({ antialias: true });
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  document.body.appendChild(renderer.domElement);
+
+  const controls = new THREE.OrbitControls(camera, renderer.domElement);
+  controls.enableDamping = true;
+
+  // Luces
+  scene.add(new THREE.AmbientLight(0xffffff, 0.6));
+  const light = new THREE.DirectionalLight(0xffffff, 0.8);
+  light.position.set(5, 10, 5);
+  scene.add(light);
+
+  // Suelo
+  const floor = new THREE.Mesh(new THREE.PlaneGeometry(20, 20),
+    new THREE.MeshPhongMaterial({ color: 0xdddddd, side: THREE.DoubleSide }));
+  floor.rotation.x = -Math.PI/2;
+  scene.add(floor);
+
+  // Ojo
+  const ojo = new THREE.Mesh(new THREE.SphereGeometry(0.15, 16, 16),
+    new THREE.MeshPhongMaterial({ color: 0xff0000 }));
+  ojo.position.set(0, 1.5, 6);
+  scene.add(ojo);
+
+  // Espejo plano
+  const mirrorPlane = new THREE.Mesh(new THREE.PlaneGeometry(3, 3),
+    new THREE.MeshBasicMaterial({ color: 0x0000ff, side: THREE.DoubleSide }));
+  mirrorPlane.position.set(0, 1.5, 0);
+  scene.add(mirrorPlane);
+
+  // Espejo cóncavo
+  const concaveMirror = new THREE.Mesh(new THREE.SphereGeometry(2, 32, 32, 0, Math.PI),
+    new THREE.MeshPhongMaterial({ color: 0x0000ff, opacity: 0.3, transparent: true, side: THREE.BackSide }));
+  concaveMirror.rotation.y = Math.PI;
+  concaveMirror.position.set(0, 1.5, -4);
+  scene.add(concaveMirror);
+
+  const vertexZ = -4;
+  const f = 1; // foco
+  const focoMarker = new THREE.Mesh(new THREE.SphereGeometry(0.05, 16, 16),
+    new THREE.MeshBasicMaterial({ color: 0x00ff00 }));
+  focoMarker.position.set(0, 1.5, vertexZ + f);
+  scene.add(focoMarker);
+
+  // Grupo real: mesa + jarrón + flores
+  const objetoReal = new THREE.Group();
+
+  // Mesa
+  const mesa = new THREE.Group();
+  const pared = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.6, 0.4),
+    new THREE.MeshPhongMaterial({ color: 0x8B4513 }));
+  pared.position.set(0, 0.3, -0.2);
+  mesa.add(pared);
+  const baseInferior = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.05, 0.4),
+    new THREE.MeshPhongMaterial({ color: 0x8B4513 }));
+  baseInferior.position.set(0, 0.025, 0);
+  mesa.add(baseInferior);
+  const baseSuperior = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.05, 0.4),
+    new THREE.MeshPhongMaterial({ color: 0x8B4513 }));
+  baseSuperior.position.set(0, 0.575, 0);
+  mesa.add(baseSuperior);
+
+  objetoReal.add(mesa);
+
+  // Jarrón y flores
+  const vaso = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.15, 0.5, 32),
+    new THREE.MeshPhongMaterial({ color: 0x2222aa }));
+  vaso.position.set(0, 0.25, 0);
+  objetoReal.add(vaso);
+
+  for (let i=0;i<3;i++) {
+    const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.6, 8),
+      new THREE.MeshPhongMaterial({ color: 0x228B22 }));
+    stem.position.set((i-1)*0.08, 0.6, 0);
+    objetoReal.add(stem);
+
+    const flower = new THREE.Mesh(new THREE.SphereGeometry(0.07,16,16),
+      new THREE.MeshPhongMaterial({ color:[0xff69b4,0xffff00,0xff0000][i%3] }));
+    flower.position.set(stem.position.x, 0.9, 0);
+    objetoReal.add(flower);
+  }
+
+  objetoReal.position.set(0, 0, -2);
+  scene.add(objetoReal);
+
+  // Grupo imagen (reflejo)
+  const imagenGrupo = objetoReal.clone();
+  imagenGrupo.traverse(node=>{
+    if(node.isMesh) node.material = node.material.clone();
+    if(node.material) node.material.color.set(0x9933ff);
+    if(node.material) node.material.opacity = 0.4;
+    if(node.material) node.material.transparent = true;
+  });
+  scene.add(imagenGrupo);
+
+  // Creamos un "control dummy" invisible para arrastrar TODO junto
+  const dragControlObject = new THREE.Mesh(
+    new THREE.BoxGeometry(1, 1, 1),
+    new THREE.MeshBasicMaterial({ visible: false })
+  );
+  dragControlObject.position.copy(objetoReal.position);
+  scene.add(dragControlObject);
+
+  // Drag Controls SOLO sobre el objeto invisible
+  const dragControls = new THREE.DragControls([dragControlObject], camera, renderer.domElement);
+  dragControls.addEventListener('dragstart', e => controls.enabled = false);
+  dragControls.addEventListener('dragend', e => controls.enabled = true);
+  dragControls.addEventListener('drag', e => {
+    // Actualizar posición de grupo real y reflejo
+    objetoReal.position.copy(dragControlObject.position);
+    imagenGrupo.position.copy(dragControlObject.position);
+
+    // Aplicar fórmula óptica para posicionar la imagen en z (sobre z eje)
+    const doZ = objetoReal.position.z;
+    const vertexZ = -4;
+    const f = 1;
+    const doDist = Math.abs(doZ - vertexZ);
+    const invDi = 1/f - 1/doDist;
+    const di = invDi === 0 ? 999 : 1/invDi;
+    const real = di > 0;
+
+    // Posición z imagen
+    imagenGrupo.position.z = vertexZ + di;
+
+    // Escala y rotación según magnificación e inversión
+    const magnification = -di / doDist;
+    imagenGrupo.scale.set(Math.abs(magnification), Math.abs(magnification), 1);
+    imagenGrupo.rotation.x = real ? Math.PI : 0;
+  });
+
+  // Status
+  const statusEl = document.getElementById('status');
+
+  function updateStatus() {
+    const doZ = objetoReal.position.z;
+    const doDist = Math.abs(doZ - vertexZ);
+    const invDi = 1/f - 1/doDist;
+    const di = invDi === 0 ? 999 : 1/invDi;
+    const real = di > 0;
+    const magnification = -di / doDist;
+
+    statusEl.innerHTML = `
+      Objeto: ${doDist.toFixed(2)} u<br>
+      Imagen: ${di.toFixed(2)} u<br>
+      Tipo: <b>${real?'Real (invertida)':'Virtual (derecha)'}</b><br>
+      Escala: ${magnification.toFixed(2)}
+    `;
+  }
+
+  function animate() {
+    requestAnimationFrame(animate);
+    controls.update();
+
+    // Actualizar status y render
+    updateStatus();
+    renderer.render(scene, camera);
+  }
+  animate();
+
+  window.addEventListener('resize', () => {
+    camera.aspect = window.innerWidth/window.innerHeight;
+    camera.updateProjectionMatrix();
     renderer.setSize(window.innerWidth, window.innerHeight);
-    document.body.appendChild(renderer.domElement);
+  });
 
-    const controls = new THREE.OrbitControls(camera, renderer.domElement);
-    controls.enableDamping = true;
-
-    const floor = new THREE.Mesh(
-      new THREE.PlaneGeometry(10, 10),
-      new THREE.MeshPhongMaterial({ color: 0xaaaaaa, side: THREE.DoubleSide })
-    );
-    floor.rotation.x = -Math.PI / 2;
-    scene.add(floor);
-
-    const eye = new THREE.Mesh(
-      new THREE.SphereGeometry(0.1, 16, 16),
-      new THREE.MeshPhongMaterial({ color: 0xff0000 })
-    );
-    eye.position.set(0, 2.5, -5.5);
-    scene.add(eye);
-
-    const mirrorPlane = new THREE.Mesh(
-      new THREE.PlaneGeometry(4, 4),
-      new THREE.MeshBasicMaterial({ color: 0x0000ff, side: THREE.DoubleSide })
-    );
-    mirrorPlane.position.set(0, 1.5, 0);
-    scene.add(mirrorPlane);
-
-    const concaveMirror = new THREE.Mesh(
-      new THREE.SphereGeometry(2, 32, 32, 0, Math.PI),
-      new THREE.MeshPhongMaterial({ color: 0x0000ff, opacity: 0.3, transparent: true, side: THREE.BackSide })
-    );
-    concaveMirror.rotation.y = Math.PI;
-    concaveMirror.rotation.z = Math.PI / 2;
-    concaveMirror.position.set(0, 1.0, -5);
-    scene.add(concaveMirror);
-
-    const vase = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.25, 0.15, 0.5, 32, 1, true),
-      new THREE.MeshPhongMaterial({ color: 0x2222aa, side: THREE.DoubleSide })
-    );
-    vase.scale.y = -1;
-    vase.position.set(0.2, 0.25, -2.6);
-    scene.add(vase);
-
-    const ramo = new THREE.Group();
-    for (let i = 0; i < 3; i++) {
-      const stem = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.02, 0.02, 0.6, 8),
-        new THREE.MeshPhongMaterial({ color: 0x228B22 })
-      );
-      stem.position.set((i - 1) * 0.08, 0.3, 0);
-      ramo.add(stem);
-
-      const flower = new THREE.Mesh(
-        new THREE.SphereGeometry(0.07, 16, 16),
-        new THREE.MeshPhongMaterial({ color: [0xff69b4, 0xffff00, 0xff0000][i % 3] })
-      );
-      flower.position.set(stem.position.x, 0.6 + 0.07, 0);
-      ramo.add(flower);
-    }
-    ramo.position.set(0.2, 0.6, -2.6);
-    scene.add(ramo);
-
-    const textureMaterial = new THREE.MeshBasicMaterial({ color: 0x9933ff, opacity: 0.6, transparent: true });
-
-    const virtualVase = new THREE.Mesh(
-      new THREE.PlaneGeometry(0.5, 0.5),
-      textureMaterial.clone()
-    );
-    virtualVase.position.set(0, 0.75, -0.01);
-    virtualVase.rotation.y = Math.PI;
-    scene.add(virtualVase);
-
-    const virtualFlowers = new THREE.Mesh(
-      new THREE.PlaneGeometry(0.5, 0.5),
-      textureMaterial.clone()
-    );
-    virtualFlowers.position.set(0.15, 1.35, -0.01);
-    virtualFlowers.rotation.y = Math.PI;
-    scene.add(virtualFlowers);
-
-    const rayMaterial = new THREE.LineBasicMaterial({ color: 0xffff00 });
-    const bouncePoint = new THREE.Vector3(0, 1.5, 0);
-    const realObjPoint = new THREE.Vector3(0.2, 1.5, -2.6);
-
-    const ray1 = new THREE.Line(
-      new THREE.BufferGeometry().setFromPoints([eye.position.clone(), bouncePoint]),
-      rayMaterial
-    );
-    const ray2 = new THREE.Line(
-      new THREE.BufferGeometry().setFromPoints([bouncePoint, realObjPoint]),
-      rayMaterial
-    );
-    scene.add(ray1);
-    scene.add(ray2);
-
-    scene.add(new THREE.AmbientLight(0xffffff, 0.6));
-    const light = new THREE.DirectionalLight(0xffffff, 0.8);
-    light.position.set(5, 10, 5);
-    scene.add(light);
-
-    window.addEventListener('resize', () => {
-      camera.aspect = window.innerWidth / window.innerHeight;
-      camera.updateProjectionMatrix();
-      renderer.setSize(window.innerWidth, window.innerHeight);
-    });
-
-    function animate() {
-      requestAnimationFrame(animate);
-
-      const deltaX = camera.position.x;
-      virtualVase.position.x = deltaX * -0.25;
-      virtualFlowers.position.x = 0.15 + deltaX * 0.25;
-
-      controls.update();
-      renderer.render(scene, camera);
-    }
-    animate();
-  </script>
+})();
+</script>
 </body>
 </html>
