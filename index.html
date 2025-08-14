@@ -12,6 +12,7 @@
             padding: 10px;
             font-family: Arial;
             z-index: 1;
+            user-select: none;
         }
         #status {
             position: absolute;
@@ -20,6 +21,7 @@
             color: #fff; padding: 8px;
             font-size: 14px; font-family: monospace;
             z-index: 1;
+            user-select: none;
         }
         .label {
             position: absolute;
@@ -51,7 +53,9 @@
 
 <script src="https://cdn.jsdelivr.net/npm/three@0.145.0/build/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.145.0/examples/js/controls/OrbitControls.js"></script>
+<!-- Se ha corregido la URL de DragControls.js -->
 <script src="https://cdn.jsdelivr.net/npm/three@0.145.0/examples/js/controls/DragControls.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.145.0/examples/js/objects/Reflector.js"></script>
 
 <script>
 (() => {
@@ -80,42 +84,43 @@
     floor.rotation.x = -Math.PI / 2;
     scene.add(floor);
 
-    // Ojo (sujeto)
+    // Sujeto (ojo)
     const ojo = new THREE.Mesh(new THREE.SphereGeometry(0.15, 16, 16),
-        new THREE.MeshPhongMaterial({ color: 0xff0000 }));
+        new THREE.MeshPhongMaterial({ color: 0xff0000, opacity: 0.5, transparent: true }));
     ojo.position.set(0, 1.5, 6);
     scene.add(ojo);
 
-    // --- CÓDIGO PARA EL REFLEJO REAL EN EL ESPEJO PLANO ---
-    // Render target para el reflejo
-    const reflectCamera = new THREE.PerspectiveCamera();
-    const reflector = new THREE.WebGLRenderTarget(window.innerWidth, window.innerHeight, {
-        minFilter: THREE.LinearFilter,
-        magFilter: THREE.LinearFilter,
-        format: THREE.RGBAFormat,
-        stencilBuffer: false // No necesitamos stencil buffer
-    });
+    // --- Espejo Plano con dos caras ---
+    const mirrorGeometry = new THREE.PlaneGeometry(3, 3);
+    
+    // Cara frontal opaca (la que mira al sujeto)
+    const mirrorFront = new THREE.Mesh(mirrorGeometry, 
+        new THREE.MeshBasicMaterial({ color: 0x444444, side: THREE.DoubleSide }));
+    mirrorFront.position.set(0, 1.5, 0.02); 
+    scene.add(mirrorFront);
 
-    // Material para el espejo plano usando la textura del reflector
-    const mirrorPlaneMaterial = new THREE.MeshBasicMaterial({
-        map: reflector.texture,
-        side: THREE.DoubleSide
+    // Cara posterior reflectante (la que mira al objeto)
+    const mirrorPlane = new THREE.Reflector(mirrorGeometry, {
+        clipBias: 0.003,
+        textureWidth: window.innerWidth * window.devicePixelRatio,
+        textureHeight: window.innerHeight * window.devicePixelRatio,
+        color: 0xcccccc // Color base del reflejo
     });
-    const mirrorPlane = new THREE.Mesh(new THREE.PlaneGeometry(3, 3), mirrorPlaneMaterial);
-    mirrorPlane.position.set(0, 1.5, 0);
+    // Rotamos la malla reflectante para que su cara frontal mire hacia los objetos.
+    mirrorPlane.rotation.y = Math.PI;
+    mirrorPlane.position.set(0, 1.5, 0); 
     scene.add(mirrorPlane);
-
-    // Espejo cóncavo
+    
+    // Espejo Cóncavo
     const concaveMirror = new THREE.Mesh(new THREE.SphereGeometry(2, 32, 32, 0, Math.PI),
         new THREE.MeshPhongMaterial({ color: 0x0000ff, opacity: 0.3, transparent: true, side: THREE.BackSide }));
     concaveMirror.rotation.y = Math.PI;
     concaveMirror.position.set(0, 1.5, -4);
     scene.add(concaveMirror);
 
-    // Vértice y foco del espejo cóncavo
+    // Vértice y Foco del espejo cóncavo
     const vertexZ = -4;
-    const f = 1; // foco = R/2 = 2/2 =1
-
+    const f = 1;
     const vertexMarker = new THREE.Mesh(
         new THREE.SphereGeometry(0.05, 16, 16),
         new THREE.MeshBasicMaterial({ color: 0x0000ff })
@@ -130,7 +135,7 @@
     focoMarker.position.set(0, 1.5, vertexZ + f);
     scene.add(focoMarker);
 
-    // Etiquetas HTML para vértice y foco
+    // Etiquetas HTML para el vértice y el foco
     const vertexLabel = document.createElement('div');
     vertexLabel.className = 'label';
     vertexLabel.innerText = 'Vértice';
@@ -141,14 +146,15 @@
     focoLabel.innerText = 'Foco';
     document.body.appendChild(focoLabel);
 
-    // Grupo real: mesa + jarrón + flores
+    // Grupo de objeto real: mesa + jarrón + flores
     const objetoReal = new THREE.Group();
 
     // Mesa
     const mesa = new THREE.Group();
     const pared = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.6, 0.4),
         new THREE.MeshPhongMaterial({ color: 0x8B4513 }));
-    pared.position.set(0, 0.3, -0.2);
+    pared.position.set(0, 0.3, 0.2);
+    pared.rotation.y = Math.PI / 2;
     mesa.add(pared);
     const baseInferior = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.05, 0.4),
         new THREE.MeshPhongMaterial({ color: 0x8B4513 }));
@@ -171,20 +177,29 @@
     for (let i = 0; i < 3; i++) {
         const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.6, 8),
             new THREE.MeshPhongMaterial({ color: 0x228B22 }));
-        stem.position.set((i - 1) * 0.08, 0.6, 0);
+        stem.position.set((i - 1) * 0.08, 0.9, 0);
         objetoReal.add(stem);
 
         const flower = new THREE.Mesh(new THREE.SphereGeometry(0.07, 16, 16),
             new THREE.MeshPhongMaterial({ color: [0xff69b4, 0xffff00, 0xff0000][i % 3] }));
-        flower.position.set(stem.position.x, 0.9, 0);
+        flower.position.set(stem.position.x, 1.2, 0);
         objetoReal.add(flower);
     }
-
+    
+    // El objeto real no está invertido
     objetoReal.position.set(0, 0, -2);
     scene.add(objetoReal);
 
-    // Grupo imagen (reflejo en cóncavo)
-    const imagenGrupo = objetoReal.clone();
+    // Crear un grupo temporal con todo menos la mesa
+    const objetoSinMesa = new THREE.Group();
+    objetoReal.children.forEach(child => {
+        if (child !== mesa) {
+            objetoSinMesa.add(child.clone());
+        }
+    });
+
+    // Clonar solo el grupo sin la mesa para imagenGrupo
+    const imagenGrupo = objetoSinMesa.clone();
     imagenGrupo.traverse(node => {
         if (node.isMesh) node.material = node.material.clone();
         if (node.material) node.material.color.set(0x9933ff);
@@ -193,21 +208,8 @@
     });
     scene.add(imagenGrupo);
 
-    // NO NECESITAMOS imagenPlano como un objeto separado, el mirrorPlane hará el reflejo real.
-    // Lo ocultamos si queremos mantener la estructura del código original pero sin que se renderice.
-    // const imagenPlano = imagenGrupo.clone();
-    // imagenPlano.traverse(node=>{
-    //   if(node.isMesh) node.material = node.material.clone();
-    //   if(node.material) {
-    //     node.material.color.set(0x9966ff);
-    //     node.material.opacity = 0.3;
-    //     node.material.transparent = true;
-    //   }
-    // });
-    // scene.add(imagenPlano);
 
-
-    // Control invisible para drag de todo el objeto real
+    // Control invisible para arrastrar el objeto real
     const dragControlObject = new THREE.Mesh(
         new THREE.BoxGeometry(1, 1, 1),
         new THREE.MeshBasicMaterial({ visible: false })
@@ -219,69 +221,45 @@
     dragControls.addEventListener('dragstart', e => controls.enabled = false);
     dragControls.addEventListener('dragend', e => controls.enabled = true);
     dragControls.addEventListener('drag', e => {
-        // Mover grupo real
         objetoReal.position.copy(dragControlObject.position);
 
-        // Fórmula óptica espejo cóncavo
         const doZ = objetoReal.position.z;
         const doDist = Math.abs(doZ - vertexZ);
         const invDi = 1 / f - 1 / doDist;
         const di = invDi === 0 ? 999 : 1 / invDi;
         const real = di > 0;
 
-        // Posición y escala imagen en cóncavo
         imagenGrupo.position.set(objetoReal.position.x, objetoReal.position.y, vertexZ + di);
 
         const magnification = -di / doDist;
         imagenGrupo.scale.set(Math.abs(magnification), Math.abs(magnification), 1);
-        imagenGrupo.rotation.x = real ? Math.PI : 0;
-
-        // --- CORRECCIÓN PARA LA INVERSIÓN DE LA IMAGEN CÓNCAVA ---
-        // Asumimos que la altura del objeto (desde su base hasta la punta de las flores) es aproximadamente 0.65.
-        // Esto es necesario para que la imagen invertida se alinee por la base.
-        const alturaObjetoVisibile = 0.65; // Ajusta este valor si tu modelo cambia
+        
+        imagenGrupo.rotation.x = real ? Math.PI : 0; 
+        
+        const alturaObjetoVisible = 0.65; 
         if (real) {
-            // Si la imagen es real e invertida, ajustamos su posición Y para que su "base" coincida con la base del objeto real.
-            // La rotación alrededor de su centro hace que la parte superior quede abajo,
-            // pero si su centro sigue en la misma Y que el objeto real, la base se levanta.
-            // Necesitamos "bajar" el centro de la imagen para que su base (lo que ahora está arriba) esté en el suelo.
-            // El punto de pivote es el centro del objeto (0,0,0 de su geometría).
-            // Si se rota 180 grados, el centro sigue siendo (0,0,0).
-            // Si el objeto real tiene su base en Y=0, y tiene una altura de 0.65, su centro "óptico" está en 0.325.
-            // Al rotar, la flor que estaba en 0.9 ahora estará en -0.9 respecto a la base del grupo.
-            // Para que la base de la imagen invertida (las flores) esté en la misma Y que la base del objeto real (0),
-            // necesitamos que el centro del grupo (imagenGrupo.position.y) se ajuste.
-            imagenGrupo.position.y = objetoReal.position.y + (alturaObjetoVisibile * Math.abs(magnification));
+            imagenGrupo.position.y = objetoReal.position.y + (alturaObjetoVisible * Math.abs(magnification));
         } else {
-            // Si es virtual, no hay inversión vertical y se mantiene la misma Y del objeto real.
             imagenGrupo.position.y = objetoReal.position.y;
         }
-
-        // Ya no necesitamos actualizar imagenPlano aquí, ya que el reflector lo hará automáticamente.
     });
 
     // Rayos visuales: ojo->objeto, objeto->vértice, objeto->foco
     const rayMaterial = new THREE.LineBasicMaterial({ color: 0xffff00 });
-
     const rayOjoObjeto = new THREE.Line(new THREE.BufferGeometry(), rayMaterial);
     const rayObjetoVertice = new THREE.Line(new THREE.BufferGeometry(), rayMaterial);
     const rayObjetoFoco = new THREE.Line(new THREE.BufferGeometry(), rayMaterial);
     scene.add(rayOjoObjeto, rayObjetoVertice, rayObjetoFoco);
 
-    // Función para actualizar etiquetas HTML
     function updateLabelPosition(label, position) {
         const vector = position.clone();
         vector.project(camera);
-
         const x = (vector.x * 0.5 + 0.5) * window.innerWidth;
         const y = (-vector.y * 0.5 + 0.5) * window.innerHeight;
-
         label.style.transform = `translate(-50%, -50%) translate(${x}px,${y}px)`;
     }
 
-    // Status
     const statusEl = document.getElementById('status');
-
     function updateStatus() {
         const doZ = objetoReal.position.z;
         const doDist = Math.abs(doZ - vertexZ);
@@ -289,7 +267,6 @@
         const di = invDi === 0 ? 999 : 1 / invDi;
         const real = di > 0;
         const magnification = -di / doDist;
-
         statusEl.innerHTML = `
             Objeto: ${doDist.toFixed(2)} u<br>
             Imagen: ${di.toFixed(2)} u<br>
@@ -301,58 +278,12 @@
     function animate() {
         requestAnimationFrame(animate);
         controls.update();
-
-        // --- CÓDIGO PARA EL REFLEJO REAL EN EL ESPEJO PLANO ---
-        // 1. Ocultar el espejo plano para evitar que se refleje a sí mismo.
-        mirrorPlane.visible = false;
-
-        // 2. Posicionar la cámara de reflejo.
-        // Se refleja la posición y orientación de la cámara principal con respecto al plano del espejo.
-        const mirrorWorldPosition = new THREE.Vector3();
-        mirrorPlane.getWorldPosition(mirrorWorldPosition);
-
-        const mirrorNormal = new THREE.Vector3(0, 0, 1); // Normal del plano XY (frente al espejo)
-        mirrorNormal.applyQuaternion(mirrorPlane.quaternion); // Rotar la normal si el espejo tiene rotación
-
-        const cameraWorldPosition = new THREE.Vector3();
-        camera.getWorldPosition(cameraWorldPosition);
-
-        // Vector desde la cámara principal al centro del espejo
-        const cameraToMirror = new THREE.Vector3().subVectors(cameraWorldPosition, mirrorWorldPosition);
-
-        // Calcular la posición reflejada de la cámara
-        const distance = cameraToMirror.dot(mirrorNormal);
-        reflectCamera.position.copy(cameraWorldPosition).sub(mirrorNormal.multiplyScalar(2 * distance));
-
-        // Rotar la cámara de reflejo para que mire en la dirección correcta.
-        // La rotación es un poco más compleja, se puede usar un Quaternión o matrices.
-        // Para un plano simple XY, reflejar el vector 'lookAt' y el 'up' es suficiente.
-        const target = new THREE.Vector3();
-        camera.getWorldDirection(target).negate(); // Invertir la dirección de mirada
-        reflectCamera.lookAt(new THREE.Vector3().addVectors(reflectCamera.position, target));
-
-        reflectCamera.aspect = camera.aspect;
-        reflectCamera.updateProjectionMatrix();
-
-        // 3. Renderizar la escena en el reflector (render target)
-        renderer.setRenderTarget(reflector);
-        renderer.render(scene, reflectCamera);
-
-        // 4. Restaurar el render target predeterminado y mostrar el espejo.
-        renderer.setRenderTarget(null);
-        mirrorPlane.visible = true;
-        // --- FIN CÓDIGO REFLEJO REAL ---
-
-
-        // Actualizar etiquetas posición
+        
         updateLabelPosition(vertexLabel, vertexMarker.position);
         updateLabelPosition(focoLabel, focoMarker.position);
-
-        // Actualizar rayos
         rayOjoObjeto.geometry.setFromPoints([ojo.position, objetoReal.position]);
         rayObjetoVertice.geometry.setFromPoints([objetoReal.position, vertexMarker.position]);
         rayObjetoFoco.geometry.setFromPoints([objetoReal.position, focoMarker.position]);
-
         updateStatus();
         renderer.render(scene, camera);
     }
@@ -362,7 +293,6 @@
         camera.aspect = window.innerWidth / window.innerHeight;
         camera.updateProjectionMatrix();
         renderer.setSize(window.innerWidth, window.innerHeight);
-        reflector.setSize(window.innerWidth, window.innerHeight); // Actualizar tamaño del render target
     });
 })();
 </script>
