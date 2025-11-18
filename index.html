@@ -2,58 +2,65 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Esquema Óptico con Imagen Real/Virtual</title>
     <style>
-        body { margin: 0; overflow: hidden; }
+        body { margin: 0; overflow: hidden; font-family: 'Inter', sans-serif; }
         #info {
             position: absolute;
             top: 10px; left: 10px;
-            background: rgba(255,255,255,0.8);
-            padding: 10px;
-            font-family: Arial;
+            background: rgba(255,255,255,0.9);
+            padding: 12px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
             z-index: 1;
             user-select: none;
         }
+        #info h3 { margin-top: 0; color: #1f2937; }
+        #info p { margin-bottom: 5px; font-size: 14px; }
         #status {
             position: absolute;
             bottom: 10px; left: 10px;
-            background: rgba(0,0,0,0.6);
-            color: #fff; padding: 8px;
-            font-size: 14px; font-family: monospace;
+            background: rgba(17, 24, 39, 0.9);
+            color: #d1d5db; 
+            padding: 10px;
+            border-radius: 8px;
+            font-size: 14px; 
+            font-family: monospace;
             z-index: 1;
             user-select: none;
+            line-height: 1.5;
         }
+        #status b { color: #facc15; }
         .label {
             position: absolute;
-            background: rgba(255,255,255,0.9);
-            padding: 2px 6px;
-            border-radius: 4px;
+            background: rgba(255,255,255,0.95);
+            padding: 4px 8px;
+            border-radius: 6px;
             font-family: monospace;
             font-size: 13px;
             pointer-events: none;
             user-select: none;
-            border: 1px solid #aaa;
+            border: 1px solid #9ca3af;
             white-space: nowrap;
             z-index: 2;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
     </style>
 </head>
 <body>
 <div id="info">
-    <h3>Esquema Óptico</h3>
-    <p>
-        🔴 Sujeto (ojo) <br>
-        🔵 Espejo plano <br>
-        🔵 Transparente: Espejo cóncavo <br>
-        🟣 Imagen (real/virtual) <br>
-        🟡 Líneas amarillas: rayos visuales
-    </p>
+    <h3>Esquema Óptico (Espejo Cóncavo)</h3>
+    <p>Arrastra el objeto para ver los cambios.</p>
+    <p>🟣 Objeto (Real)</p>
+    <p>🟡 Imagen (Real/Virtual)</p>
+    <p style="color: #0000ff;">— Rayo Central (a través de C)</p>
+    <p style="color: #ff0000;">— Rayo Paralelo</p>
 </div>
 <div id="status"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/three@0.145.0/build/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.145.0/examples/js/controls/OrbitControls.js"></script>
-<!-- Se ha corregido la URL de DragControls.js -->
 <script src="https://cdn.jsdelivr.net/npm/three@0.145.0/examples/js/controls/DragControls.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.145.0/examples/js/objects/Reflector.js"></script>
 
@@ -63,7 +70,7 @@
     scene.background = new THREE.Color(0xf0f0f0);
 
     const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 100);
-    camera.position.set(0, 2, 8);
+    camera.position.set(10, 2, 0);
 
     const renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
@@ -71,6 +78,14 @@
 
     const controls = new THREE.OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
+
+    // --- Variables Ópticas Clave ---
+    const vertexZ   = -4;         // Posición Z del Vértice (Espejo)
+    const f         = 1.0;      // Distancia Focal (f = R/2)
+    const objHeight = 0.65;     // Altura base del objeto (usada para la escala)
+    const objBaseY  = 1.5;      // Eje óptico Y
+    const minObjectZ = -15;     // Límite trasero (lejos de la cámara)
+    const maxObjectZ = 5;       // Límite frontal (cerca de la cámara)
 
     // Luces
     scene.add(new THREE.AmbientLight(0xffffff, 0.6));
@@ -84,134 +99,115 @@
     floor.rotation.x = -Math.PI / 2;
     scene.add(floor);
 
-    // Sujeto (ojo)
+    // Sujeto (ojo - no funcional en óptica, solo decorativo)
     const ojo = new THREE.Mesh(new THREE.SphereGeometry(0.15, 16, 16),
         new THREE.MeshPhongMaterial({ color: 0xff0000, opacity: 0.5, transparent: true }));
-    ojo.position.set(0, 1.5, 6);
+    ojo.position.set(0, objBaseY, 6);
     scene.add(ojo);
 
-    // --- Espejo Plano con dos caras ---
-    const mirrorGeometry = new THREE.PlaneGeometry(3, 3);
-    
-    // Cara frontal opaca (la que mira al sujeto)
+    // --- Espejo Plano (Reflector) ---
+    const mirrorGeometry = new THREE.PlaneGeometry(4, 4);
     const mirrorFront = new THREE.Mesh(mirrorGeometry, 
         new THREE.MeshBasicMaterial({ color: 0x444444, side: THREE.DoubleSide }));
-    mirrorFront.position.set(0, 1.5, 0.02); 
+    mirrorFront.position.set(0, objBaseY, 0.02); 
     scene.add(mirrorFront);
-
-    // Cara posterior reflectante (la que mira al objeto)
     const mirrorPlane = new THREE.Reflector(mirrorGeometry, {
-        clipBias: 0.003,
+        clipBias: 0.001,
         textureWidth: window.innerWidth * window.devicePixelRatio,
         textureHeight: window.innerHeight * window.devicePixelRatio,
-        color: 0xcccccc // Color base del reflejo
+        color: 0xcccccc 
     });
-    // Rotamos la malla reflectante para que su cara frontal mire hacia los objetos.
     mirrorPlane.rotation.y = Math.PI;
-    mirrorPlane.position.set(0, 1.5, 0); 
+    mirrorPlane.position.set(0, objBaseY, 0); 
     scene.add(mirrorPlane);
     
-    // Espejo Cóncavo
-    const concaveMirror = new THREE.Mesh(new THREE.SphereGeometry(2, 32, 32, 0, Math.PI),
+    // Espejo Cóncavo (Lente/Espejo principal)
+    const concaveMirror = new THREE.Mesh(new THREE.SphereGeometry(2 * f, 32, 32, 0, Math.PI),
         new THREE.MeshPhongMaterial({ color: 0x0000ff, opacity: 0.3, transparent: true, side: THREE.BackSide }));
     concaveMirror.rotation.y = Math.PI;
-    concaveMirror.position.set(0, 1.5, -4);
+    concaveMirror.position.set(0, objBaseY, vertexZ - (2 * f)); // Posiciona el centro en Z = -6
     scene.add(concaveMirror);
 
-    // Vértice y Foco del espejo cóncavo
-    const vertexZ = -4;
-    const f = 1;
+    // Marcadores y Etiquetas
     const vertexMarker = new THREE.Mesh(
         new THREE.SphereGeometry(0.05, 16, 16),
         new THREE.MeshBasicMaterial({ color: 0x0000ff })
     );
-    vertexMarker.position.set(0, 1.5, vertexZ);
+    vertexMarker.position.set(0, objBaseY, vertexZ);
     scene.add(vertexMarker);
 
     const focoMarker = new THREE.Mesh(
         new THREE.SphereGeometry(0.05, 16, 16),
         new THREE.MeshBasicMaterial({ color: 0x00ff00 })
     );
-    focoMarker.position.set(0, 1.5, vertexZ + f);
+    focoMarker.position.set(0, objBaseY, vertexZ + f);
     scene.add(focoMarker);
 
-    // Etiquetas HTML para el vértice y el foco
     const vertexLabel = document.createElement('div');
     vertexLabel.className = 'label';
-    vertexLabel.innerText = 'Vértice';
+    vertexLabel.innerText = 'V (Vértice)';
     document.body.appendChild(vertexLabel);
 
     const focoLabel = document.createElement('div');
     focoLabel.className = 'label';
-    focoLabel.innerText = 'Foco';
+    focoLabel.innerText = 'F (Foco)';
     document.body.appendChild(focoLabel);
 
-    // Grupo de objeto real: mesa + jarrón + flores
+    // --- Objeto Real (Grupo) ---
     const objetoReal = new THREE.Group();
 
-    // Mesa
+    // Mesa (Base del objeto)
     const mesa = new THREE.Group();
-    const pared = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.6, 0.4),
-        new THREE.MeshPhongMaterial({ color: 0x8B4513 }));
-    pared.position.set(0, 0.3, 0.2);
-    pared.rotation.y = Math.PI / 2;
-    mesa.add(pared);
-    const baseInferior = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.05, 0.4),
-        new THREE.MeshPhongMaterial({ color: 0x8B4513 }));
-    baseInferior.position.set(0, 0.025, 0);
-    mesa.add(baseInferior);
-    const baseSuperior = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.05, 0.4),
-        new THREE.MeshPhongMaterial({ color: 0x8B4513 }));
-    baseSuperior.position.set(0, 0.575, 0);
-    mesa.add(baseSuperior);
-
+    const pared = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.6, 0.6), new THREE.MeshPhongMaterial({ color: 0x8B4513 }));
+    pared.position.set(0, 0.3, 0.2); pared.rotation.y = Math.PI / 2; mesa.add(pared);
+    const baseInferior = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.05, 0.4), new THREE.MeshPhongMaterial({ color: 0x8B4513 }));
+    baseInferior.position.set(0, 0.025, 0); mesa.add(baseInferior);
+    const baseSuperior = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.05, 0.4), new THREE.MeshPhongMaterial({ color: 0x8B4513 }));
+    baseSuperior.position.set(0, 0.575, 0); mesa.add(baseSuperior);
     objetoReal.add(mesa);
 
-    // Jarrón y flores
+    // Jarrón y flores (Lo que se magnifica)
     const vaso = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.15, 0.5, 32),
-        new THREE.MeshPhongMaterial({ color: 0x2222aa }));
-    vaso.position.set(0, 0.25, 0);
-    vaso.rotation.x = Math.PI
+        new THREE.MeshPhongMaterial({ color: 0x4f46e5 }));
+    vaso.position.set(0, 0.3, -0.1); 
+    vaso.rotation.x = Math.PI;
+    vaso.scale.set(0.9, 0.9, 0.9);
     objetoReal.add(vaso);
 
     for (let i = 0; i < 3; i++) {
         const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.6, 8),
             new THREE.MeshPhongMaterial({ color: 0x228B22 }));
-        stem.position.set((i - 1) * 0.08, 0.9, 0);
+        stem.position.set((i - 1) * 0.08, 0.5 + 0.575 + 0.3, 0); 
         objetoReal.add(stem);
 
         const flower = new THREE.Mesh(new THREE.SphereGeometry(0.07, 16, 16),
             new THREE.MeshPhongMaterial({ color: [0xff69b4, 0xffff00, 0xff0000][i % 3] }));
-        flower.position.set(stem.position.x, 1.2, 0);
+        flower.position.set(stem.position.x, 0.5 + 0.575 + 0.6 + 0.07, 0); 
         objetoReal.add(flower);
     }
     
-    // El objeto real no está invertido
-    objetoReal.position.set(0, 0, -2);
+    // Posición inicial del objeto
+    objetoReal.position.set(0, objBaseY - (0.575 + 0.05 / 2), -2); 
     scene.add(objetoReal);
 
-    // Crear un grupo temporal con todo menos la mesa
-    const objetoSinMesa = new THREE.Group();
+    // Crear un grupo para la imagen (solo jarrón y flores)
+    const imagenGrupo = new THREE.Group();
     objetoReal.children.forEach(child => {
-        if (child !== mesa) {
-            objetoSinMesa.add(child.clone());
-        }
+        if (child.isGroup && child === mesa) return; 
+        imagenGrupo.add(child.clone());
     });
-
-    // Clonar solo el grupo sin la mesa para imagenGrupo
-    const imagenGrupo = objetoSinMesa.clone();
     imagenGrupo.traverse(node => {
         if (node.isMesh) node.material = node.material.clone();
-        if (node.material) node.material.color.set(0x9933ff);
-        if (node.material) node.material.opacity = 0.4;
+        if (node.material) node.material.color.set(0xa855f7); // Violeta
+        if (node.material) node.material.opacity = 0.6;
         if (node.material) node.material.transparent = true;
     });
     scene.add(imagenGrupo);
-
+    imagenGrupo.position.copy(objetoReal.position);
 
     // Control invisible para arrastrar el objeto real
     const dragControlObject = new THREE.Mesh(
-        new THREE.BoxGeometry(1, 1, 1),
+        new THREE.BoxGeometry(1, 2, 1), 
         new THREE.MeshBasicMaterial({ visible: false })
     );
     dragControlObject.position.copy(objetoReal.position);
@@ -220,36 +216,102 @@
     const dragControls = new THREE.DragControls([dragControlObject], camera, renderer.domElement);
     dragControls.addEventListener('dragstart', e => controls.enabled = false);
     dragControls.addEventListener('dragend', e => controls.enabled = true);
-    dragControls.addEventListener('drag', e => {
-        objetoReal.position.copy(dragControlObject.position);
+    
+    // --- LÓGICA DE DRAG CONTROLS CORREGIDA ---
+    // --- LÓGICA DE DRAG CONTROLS CORREGIDA ---
+dragControls.addEventListener('drag', e => {
+    const dragControlObject = e.object;
 
-        const doZ = objetoReal.position.z;
-        const doDist = Math.abs(doZ - vertexZ);
-        const invDi = 1 / f - 1 / doDist;
-        const di = invDi === 0 ? 999 : 1 / invDi;
-        const real = di > 0;
+    // --- LÍMITES DE MOVIMIENTO ---
+    // 1. Restricción X: Solo movimiento en Y y Z
+    dragControlObject.position.x = 0; 
+    
+    // 2. Restricción Z: El objeto debe estar EN la cara reflectante (a la derecha) o fuera de la simulación
+    // El objeto está en Z=-2, el espejo en Z=-4.
+    // Queremos que el objeto se mueva hacia la izquierda (más negativo) hasta el límite trasero (-15)
+    // Y no puede cruzar el espejo (debe ser Z >= vertexZ + 0.01)
 
-        imagenGrupo.position.set(objetoReal.position.x, objetoReal.position.y, vertexZ + di);
+    const minAllowedZ = vertexZ + 0.01; // No puede cruzar el espejo (Z=-4) hacia la izquierda
+    const maxAllowedZ = 5; 
 
-        const magnification = -di / doDist;
-        imagenGrupo.scale.set(Math.abs(magnification), Math.abs(magnification), 1);
-        
-        imagenGrupo.rotation.x = real ? Math.PI : 0; 
-        
-        const alturaObjetoVisible = 0.65; 
-        if (real) {
-            imagenGrupo.position.y = objetoReal.position.y + (alturaObjetoVisible * Math.abs(magnification));
-        } else {
-            imagenGrupo.position.y = objetoReal.position.y;
-        }
-    });
+    // El objeto real copia la posición del objeto arrastrable
+    objetoReal.position.copy(dragControlObject.position);
 
-    // Rayos visuales: ojo->objeto, objeto->vértice, objeto->foco
-    const rayMaterial = new THREE.LineBasicMaterial({ color: 0xffff00 });
-    const rayOjoObjeto = new THREE.Line(new THREE.BufferGeometry(), rayMaterial);
-    const rayObjetoVertice = new THREE.Line(new THREE.BufferGeometry(), rayMaterial);
-    const rayObjetoFoco = new THREE.Line(new THREE.BufferGeometry(), rayMaterial);
-    scene.add(rayOjoObjeto, rayObjetoVertice, rayObjetoFoco);
+    // --- Aplicar el límite de Z ---
+    if (objetoReal.position.z < minAllowedZ) {
+        objetoReal.position.z = minAllowedZ;
+        dragControlObject.position.z = minAllowedZ;
+    }
+    if (objetoReal.position.z > maxAllowedZ) {
+        objetoReal.position.z = maxAllowedZ;
+        dragControlObject.position.z = maxAllowedZ;
+    }
+    if (objetoReal.position.z < minObjectZ) {
+        objetoReal.position.z = minObjectZ;
+        dragControlObject.position.z = minObjectZ;
+    }
+
+    // --- CÁLCULOS ÓPTICOS ---
+    const doZ = objetoReal.position.z;
+    const doDist = doZ - vertexZ; // Distancia Objeto (d₀)
+    if (Math.abs(doDist) < 0.001) return; // evitar división por cero
+
+    // Ecuación del espejo
+    const invDi = 1 / f - 1 / doDist;
+    const di = 1 / invDi;
+
+    // Magnificación (M = -di / do)
+    const magnification = -di / doDist;
+
+    // --- CALCULAR h₀ (altura del objeto desde el eje óptico) ---
+    const objCenterY = objetoReal.position.y;
+    const objTipY = objCenterY + objHeight / 2; 
+    const ho = objTipY - objBaseY; 
+
+    // --- CALCULAR hᵢ CON SIGNO: Altura de la imagen (hᵢ = M * h₀) ---
+    const hi = magnification * ho; 
+
+    // --- POSICIÓN, ESCALA Y ROTACIÓN DE LA IMAGEN ---
+    // 1. Posición Z (distancia imagen)
+    imagenGrupo.position.z = vertexZ + di;
+
+    // 2. Posición Y (base fija + mitad de altura de la imagen)
+    const imagenBaseY = objBaseY;
+    imagenGrupo.position.y = imagenBaseY + (hi / 2);
+
+    // 3. Rotación (inversión si es imagen real)
+    imagenGrupo.rotation.x = magnification < 0 ? Math.PI : 0; 
+
+    // 4. Escala uniforme (solo agranda o achica)
+    const scaleFactor = Math.abs(magnification);
+    imagenGrupo.scale.setScalar(scaleFactor);
+
+    // --- Actualizar rayos ---
+    drawRays(); 
+});
+
+
+
+    // --- RAYOS VISUALES: CONFIGURACIÓN INICIAL ---
+    
+    // Ray 1: Rayo Paralelo
+    const rayParallelIncident = new THREE.Line(new THREE.BufferGeometry(), new THREE.LineBasicMaterial({ color: 0xff0000 }));
+    const rayParallelReflected = new THREE.Line(new THREE.BufferGeometry(), new THREE.LineBasicMaterial({ color: 0xff0000 }));
+
+    // Ray 2: Rayo Central (a través de C)
+    const rayCentralIncident = new THREE.Line(new THREE.BufferGeometry(), new THREE.LineBasicMaterial({ color: 0x0000ff }));
+    const rayCentralReflected = new THREE.Line(new THREE.BufferGeometry(), new THREE.LineBasicMaterial({ color: 0x0000ff }));
+    
+    // El rayo guía de la imagen
+    const matImagen = new THREE.LineDashedMaterial({ color: 0xa855f7, dashSize: 0.1, gapSize: 0.05 });
+    let rayImagen = new THREE.Line(new THREE.BufferGeometry(), matImagen);
+    rayImagen.name = "rayImagen";
+    scene.add(rayImagen);
+    
+    scene.add(rayParallelIncident, rayParallelReflected, rayCentralIncident, rayCentralReflected);
+    
+
+    // --- FUNCIONES AUXILIARES ---
 
     function updateLabelPosition(label, position) {
         const vector = position.clone();
@@ -260,31 +322,143 @@
     }
 
     const statusEl = document.getElementById('status');
-    function updateStatus() {
-        const doZ = objetoReal.position.z;
-        const doDist = Math.abs(doZ - vertexZ);
-        const invDi = 1 / f - 1 / doDist;
-        const di = invDi === 0 ? 999 : 1 / invDi;
-        const real = di > 0;
-        const magnification = -di / doDist;
+
+    function formatNumber(value) {
+        if (!isFinite(value) || value === null || isNaN(value)) {
+            return '±∞';
+        }
+        return value.toFixed(2);
+    }
+
+    function updateStatus(hi, doDist, di, magnification) {
+
+        const tipo = di > 0 ? 'Real (invertida)' : 'Virtual (derecha)';
+
         statusEl.innerHTML = `
-            Objeto: ${doDist.toFixed(2)} u<br>
-            Imagen: ${di.toFixed(2)} u<br>
-            Tipo: <b>${real ? 'Real (invertida)' : 'Virtual (derecha)'}</b><br>
-            Escala: ${magnification.toFixed(2)}
+            Distancia Objeto (d₀): ${doDist.toFixed(2)} u<br>
+            Distancia Imagen (dᵢ): ${formatNumber(di)} u<br>
+            Magnificación (M): ${formatNumber(magnification)}<br>
+            Altura Imagen (hᵢ): ${formatNumber(hi)} u<br>
+            Tipo: <b>${tipo}</b>
         `;
+    }
+
+
+    function drawRays() {
+        // --- 1. Cálculos Ópticos ---
+        const objCenterY = objetoReal.position.y;
+        const objTipY = objCenterY + objHeight / 2; // La punta del objeto
+        const doZ = objetoReal.position.z;
+        const doDist = doZ - vertexZ; 
+        
+        const invDi = 1 / f - 1 / doDist;
+        const di = invDi === 0 ? (invDi > 0 ? 1e6 : -1e6) : 1 / invDi;
+        
+        const real = di > 0; 
+        const imagenZ = vertexZ + di;
+
+        const magnification = doDist === 0 ? 0 : -di / doDist;
+        
+        const ho = objTipY - objBaseY;
+        const hi = magnification * ho; 
+        
+        // Posición final de la punta de la imagen (calculada de forma robusta)
+        const reflTarget = new THREE.Vector3(0, objBaseY + hi, imagenZ);
+        
+        // --- 2. Materiales Punteados/Sólidos (Virtual vs. Real) ---
+
+        const setDashed = (line, color) => {
+            if (!(line.material && line.material.isLineDashedMaterial)) {
+                line.material = new THREE.LineDashedMaterial({ color: color, dashSize: 0.1, gapSize: 0.05 });
+                line.computeLineDistances();
+            }
+        };
+
+        const setSolid = (line, color) => {
+            if (line.material && line.material.isLineDashedMaterial) {
+                line.material = new THREE.LineBasicMaterial({ color: color });
+            }
+        };
+
+        // --- 3. Rayo 1: Paralelo (Incidente) -> Foco (Reflejado) ---
+        
+        const origin1 = new THREE.Vector3(0, objTipY, doZ);
+        const hit1 = new THREE.Vector3(0, objTipY, vertexZ); 
+        
+        // Rayo Incidente (Sólido)
+        rayParallelIncident.geometry.setFromPoints([origin1, hit1]);
+        setSolid(rayParallelIncident, 0xff0000);
+        
+        // Rayo Reflejado (Debe ir de hit1 hacia el foco y extenderse hasta reflTarget)
+        if (real) {
+            // Real: Sólido H1 -> ReflTarget
+            rayParallelReflected.geometry.setFromPoints([hit1, reflTarget]);
+            setSolid(rayParallelReflected, 0xff0000);
+        } else {
+            // Virtual: Sólido H1 -> Límite frontal (e.g., ojo.position.z)
+            rayParallelReflected.geometry.setFromPoints([hit1, ojo.position]);
+            setSolid(rayParallelReflected, 0xff0000);
+
+            // Prolongación punteada: ReflTarget -> H1
+            rayParallelReflected.geometry.setFromPoints([reflTarget, hit1]);
+            setDashed(rayParallelReflected, 0xff0000);
+        }
+        
+        // --- 4. Rayo 2: Central (Incidente O -> C) -> Reflejado (C -> I) ---
+        
+        const centroPos = new THREE.Vector3(0, objBaseY, vertexZ + 2 * f);
+        const origin2 = new THREE.Vector3(0, objTipY, doZ);
+        
+        // Encontrar la intersección del rayo O->C con el plano del espejo (Z = vertexZ)
+        const dirToCentro = centroPos.clone().sub(origin2);
+        let t_centro = 0;
+        if (Math.abs(dirToCentro.z) > 1e-6) {
+            t_centro = (vertexZ - origin2.z) / dirToCentro.z;
+        } else {
+            t_centro = 1; 
+        }
+        
+        const hit2 = origin2.clone().add(dirToCentro.clone().multiplyScalar(t_centro));
+        
+        // Rayo Incidente: Sólido O -> H2
+        rayCentralIncident.geometry.setFromPoints([origin2, hit2]);
+        setSolid(rayCentralIncident, 0x0000ff);
+        
+        // Rayo Reflejado: H2 -> I. Para rayo central, la reflexión sigue el camino inverso.
+        if (real) {
+            // Real: Sólido H2 -> ReflTarget
+            rayCentralReflected.geometry.setFromPoints([hit2, reflTarget]);
+            setSolid(rayCentralReflected, 0x0000ff);
+        } else {
+            // Virtual: Sólido H2 -> Límite frontal
+            rayCentralReflected.geometry.setFromPoints([hit2, ojo.position]);
+            setSolid(rayCentralReflected, 0x0000ff);
+
+            // Prolongación punteada: ReflTarget -> H2
+            rayCentralReflected.geometry.setFromPoints([reflTarget, hit2]);
+            setDashed(rayCentralReflected, 0x0000ff);
+        }
+
+        // --- 5. Línea guía punteada Imagen -> Eje Óptico ---
+        const pImagen = reflTarget.clone();
+        const eje = new THREE.Vector3(0, objBaseY, pImagen.z);
+        
+        rayImagen.geometry.setFromPoints([pImagen, eje]);
+        if (rayImagen.material && rayImagen.material.isLineDashedMaterial) rayImagen.computeLineDistances();
+        
+        // --- 6. Actualizar el estado ---
+        updateStatus(hi, doDist, di, magnification);
     }
 
     function animate() {
         requestAnimationFrame(animate);
         controls.update();
-        
+
         updateLabelPosition(vertexLabel, vertexMarker.position);
         updateLabelPosition(focoLabel, focoMarker.position);
-        rayOjoObjeto.geometry.setFromPoints([ojo.position, objetoReal.position]);
-        rayObjetoVertice.geometry.setFromPoints([objetoReal.position, vertexMarker.position]);
-        rayObjetoFoco.geometry.setFromPoints([objetoReal.position, focoMarker.position]);
-        updateStatus();
+
+        drawRays(); 
+
         renderer.render(scene, camera);
     }
     animate();
