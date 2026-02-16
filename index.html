@@ -77,7 +77,7 @@
     document.body.appendChild(renderer.domElement);
 
     const controls = new THREE.OrbitControls(camera, renderer.domElement);
-    controls.enableDamping = false;
+    controls.enableDamping = true;
 
     // --- Variables Ópticas Clave ---
     const vertexZ   = -4;         // Posición Z del Vértice (Espejo)
